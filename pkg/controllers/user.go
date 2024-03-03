@@ -103,7 +103,7 @@ func RegisterUser(c *gin.Context) {
 	defer cancel()
 
 	if err := c.BindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -147,29 +147,26 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	//create some extra details for the user object - created_at, updated_at, ID
-
-	user.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	user.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	//create some extra details for the user object ID
 	user.ID = primitive.NewObjectID()
 	user.UserID = user.ID.Hex()
 
-	//generate token and refersh token (generate all tokens function from helper)
+	//generate token and refersh toke
 
 	token, refreshToken, _ := helper.GenerateAllTokens(*user.Email, *user.FirstName, *user.LastName, user.UserID)
 	user.Token = &token
 	user.RefreshToken = &refreshToken
-	//if all ok, then you insert this new user into the user collection
 
-	resultInsertionNumber, err := userCollection.InsertOne(ctx, user)
+	//insert this new user into the user collection
+
+	result, err := userCollection.InsertOne(ctx, user)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	defer cancel()
-	//return status OK and send the result back
 
-	c.JSON(http.StatusOK, resultInsertionNumber)
+	c.JSON(200, result)
 }
 
 func LoginUser(c *gin.Context) {

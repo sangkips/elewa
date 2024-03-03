@@ -11,7 +11,7 @@ func BookRoutes(router *gin.Engine) {
 	router.Use(middleware.Authentication)
 	router.POST("/book", controllers.CreateBook)
 	router.GET("/books", controllers.GetAllBooks)
-	router.GET("/book/:id", controllers.GetBookById)
-	router.PATCH("/book/:id", controllers.UpdateBook)
-	router.DELETE("/book/:id", controllers.DeleteBook)
+	router.GET("/book/:book_id", controllers.GetBookById)
+	router.PATCH("/book/:book_id", controllers.UpdateBook)
+	router.DELETE("/book/:book_id", controllers.DeleteBook)
 }

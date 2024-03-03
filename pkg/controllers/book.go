@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var bookCollection *mongo.Collection = config.OpenCollection(config.Client, "book")
@@ -20,30 +21,16 @@ func CreateBook(c *gin.Context) {
 	var book models.Book
 	defer cancel()
 
-	if err := c.ShouldBindJSON(&book); err != nil {
+	if err := c.BindJSON(&book); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
-	}
-
-	//use the validator library to validate required fields
-	if validationErr := validate.Struct(&book); validationErr != nil {
-		c.JSON(400, gin.H{"error": validationErr.Error()})
 		return
 	}
 
-	newBook := models.Book{
-		ID:    primitive.NewObjectID(),
-		Name:  book.Name,
-		Price: book.Price,
-	}
-
-	//create some extra details for the user object - created_at, updated_at, ID
-
-	book.CreatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-	book.UpdatedAt, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	//create some extra details for the user object  ID
 	book.ID = primitive.NewObjectID()
 	book.Book_id = book.ID.Hex()
 
-	result, err := bookCollection.InsertOne(ctx, newBook)
+	result, err := bookCollection.InsertOne(ctx, book)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -79,7 +66,7 @@ func GetAllBooks(c *gin.Context) {
 func GetBookById(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-	id := c.Param("id")
+	id := c.Param("book_id")
 	_id, err := primitive.ObjectIDFromHex(id)
 	defer cancel()
 
@@ -102,14 +89,17 @@ func GetBookById(c *gin.Context) {
 }
 
 func UpdateBook(c *gin.Context) {
-	id := c.Param("id")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	id := c.Param("book_id")
 	objectID, err := primitive.ObjectIDFromHex(id)
+	var book models.Book
+	var category models.Category
+	defer cancel()
+
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-
-	var book models.Book
 
 	// Read update model from body request
 	if err := c.BindJSON(&book); err != nil {
@@ -117,28 +107,51 @@ func UpdateBook(c *gin.Context) {
 		return
 	}
 
-	// Create filter
-	filter := bson.M{"_id": objectID}
+	var UpdateBook primitive.D
 
-	// Prepare update model.
-	update := bson.D{
-		{"$set", bson.D{{"name", book.Name}, {"price", book.Price},
-			{"author", bson.D{
-				{"first_name", book.Author.FirstName},
-				{"last_name", book.Author.LastName},
-			}},
-		}},
+	if book.Name != "" {
+		UpdateBook = append(UpdateBook, bson.E{Key: "name", Value: book.Name})
 	}
 
-	err = bookCollection.FindOneAndUpdate(context.TODO(), filter, update).Decode(&book)
+	if book.Price != nil {
+		UpdateBook = append(UpdateBook, bson.E{Key: "price", Value: book.Price})
+	}
+
+	if book.Author != nil {
+		UpdateBook = append(UpdateBook, bson.E{Key: "author", Value: book.Author})
+	}
+	if book.CategoryId != nil {
+		err := categoryCollection.FindOne(ctx, bson.M{"categoryId": book.CategoryId}).Decode(&category)
+		defer cancel()
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	upsert := true
+	filter := bson.M{"_id": objectID}
+
+	opt := options.UpdateOptions{
+		Upsert: &upsert,
+	}
+
+	result, err := bookCollection.UpdateOne(
+		ctx,
+		filter,
+		bson.D{
+			{Key: "$set", Value: UpdateBook},
+		},
+		&opt,
+	)
+
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	book.ID = objectID
-
-	c.JSON(200, book)
+	c.JSON(200, result)
 }
 
 func DeleteBook(c *gin.Context) {
