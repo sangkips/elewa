@@ -1,12 +1,15 @@
 package main
 
 import (
+	"elewa/pkg/config"
 	"elewa/pkg/middleware"
 	"elewa/pkg/routes"
 	"os"
 
 	"github.com/gin-gonic/gin"
 )
+
+var mongoURI string
 
 func main() {
 	port := os.Getenv("PORT")
@@ -26,5 +29,9 @@ func main() {
 	routes.UserRoutes(router)
 
 	router.Run(":" + port)
+
+	mongoURI = os.Getenv("MONGODB_URI")
+	client := config.DbInstance()
+	config.Client = client
 
 }

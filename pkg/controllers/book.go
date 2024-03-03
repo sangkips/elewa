@@ -156,7 +156,7 @@ func UpdateBook(c *gin.Context) {
 
 func DeleteBook(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	id := c.Param("id")
+	id := c.Param("book_id")
 	_id, err := primitive.ObjectIDFromHex(id)
 
 	defer cancel()
