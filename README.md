@@ -56,3 +56,12 @@ Create a book
     }
 }
 ```
+
+### Deployment notes on AWS
+
+- Configure VPC
+- Configure EC2 instance
+- Copy go-code to the EC2 instance
+- Push the code to Docker registry / ECR
+- Pull from docker / ECR on EC2
+- Run the container
