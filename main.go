@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-	// var productCollection *mongo.Collection = config.OpenCollection(config.Client, "elewa")
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "9000"
