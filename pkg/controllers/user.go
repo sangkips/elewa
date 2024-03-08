@@ -33,7 +33,6 @@ func GetUsers(c *gin.Context) {
 		"email":      1,
 		"user_id":    1,
 	})
-	// cur, err := collection.Find(context.Background(), bson.D{{}}, opts)
 
 	result, err := userCollection.Find(ctx, bson.M{}, opts)
 	defer cancel()
@@ -51,11 +50,6 @@ func GetUsers(c *gin.Context) {
 		}
 		users = append(users, user)
 	}
-
-	// var allUsers []bson.M
-	// if err = result.All(ctx, &allUsers); err != nil {
-	// 	log.Fatal(err)
-	// }
 	c.JSON(200, users)
 
 }
