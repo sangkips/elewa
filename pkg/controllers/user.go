@@ -15,27 +15,48 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var userCollection *mongo.Collection = config.OpenCollection(config.Client, "user")
 var validate = validator.New()
 
 func GetUsers(c *gin.Context) {
+	var users []models.User
 
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
-	result, err := userCollection.Find(ctx, bson.M{})
+	opts := options.Find().SetProjection(bson.M{
+		"_id":        1,
+		"first_name": 1,
+		"last_name":  1,
+		"email":      1,
+		"user_id":    1,
+	})
+	// cur, err := collection.Find(context.Background(), bson.D{{}}, opts)
+
+	result, err := userCollection.Find(ctx, bson.M{}, opts)
 	defer cancel()
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	var allUsers []bson.M
-	if err = result.All(ctx, &allUsers); err != nil {
-		log.Fatal(err)
+	for result.Next(ctx) {
+		var user models.User
+		err := result.Decode(&user)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		users = append(users, user)
 	}
-	c.JSON(200, allUsers)
+
+	// var allUsers []bson.M
+	// if err = result.All(ctx, &allUsers); err != nil {
+	// 	log.Fatal(err)
+	// }
+	c.JSON(200, users)
 
 }
 
